@@ -12,6 +12,7 @@ class NewsList(generic.ListView):
     """Список новостей."""
     model = News
     template_name = 'news/home.html'
+    context_object_name = 'news_feed'
 
     def get_queryset(self):
         """
@@ -20,7 +21,7 @@ class NewsList(generic.ListView):
         Их количество определяется в настройках проекта.
         """
         return self.model.objects.prefetch_related(
-            'comment_set'
+            'comments'
         )[:settings.NEWS_COUNT_ON_HOME_PAGE]
 
 
@@ -30,7 +31,7 @@ class NewsDetail(generic.DetailView):
 
     def get_object(self, queryset=None):
         obj = get_object_or_404(
-            self.model.objects.prefetch_related('comment_set__author'),
+            self.model.objects.prefetch_related('comments__author'),
             pk=self.kwargs['pk']
         )
         return obj
@@ -43,9 +44,9 @@ class NewsDetail(generic.DetailView):
 
 
 class NewsComment(
-        LoginRequiredMixin,
-        generic.detail.SingleObjectMixin,
-        generic.FormView
+    LoginRequiredMixin,
+    generic.detail.SingleObjectMixin,
+    generic.FormView
 ):
     model = News
     form_class = CommentForm
@@ -63,8 +64,8 @@ class NewsComment(
         return super().form_valid(form)
 
     def get_success_url(self):
-        post = self.get_object()
-        return reverse('news:detail', kwargs={'pk': post.pk}) + '#comments'
+        return reverse('news:detail',
+                       kwargs={'pk': self.object.pk}) + '#comments'
 
 
 class NewsDetailView(generic.View):

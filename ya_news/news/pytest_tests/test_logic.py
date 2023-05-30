@@ -58,22 +58,18 @@ def test_authenticated_user_can_edit_or_delete_own_comments():
 
     client = Client()
 
-    # Edit own comment
     client.login(username='user1', password='password1')
     response = client.get(reverse('news:edit', kwargs={'pk': comment.pk}))
     assert response.status_code == 200
     assert 'form' in response.context
     assert isinstance(response.context['form'], CommentForm)
 
-    # Delete own comment
     response = client.get(reverse('news:delete', kwargs={'pk': comment.pk}))
     assert response.status_code == 200
 
-    # Edit other user's comment
     client.login(username='user2', password='password2')
     response = client.get(reverse('news:edit', kwargs={'pk': comment.pk}))
     assert response.status_code == 404
 
-    # Delete other user's comment
     response = client.get(reverse('news:delete', kwargs={'pk': comment.pk}))
     assert response.status_code == 404

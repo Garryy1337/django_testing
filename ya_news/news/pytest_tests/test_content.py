@@ -2,12 +2,15 @@ import datetime
 
 import pytest
 
-from django.contrib.auth.models import User
+
+from django.contrib.auth import get_user_model
 from django.test import Client
 from django.urls import reverse
 
 from news.models import Comment
 from news.models import News
+
+User = get_user_model()
 
 
 @pytest.mark.django_db
@@ -62,18 +65,22 @@ def test_comments_are_sorted_by_created_ascending_on_news_detail_page():
 
 
 @pytest.mark.django_db
-def test_comment_form_access():
+def test_comment_form_not_accessible_to_anonymous_user():
+    news = News.objects.create(title='Test News', text='This is a test news')
+    client = Client()
+    response = client.get(reverse('news:detail', kwargs={'pk': news.pk}))
+    assert response.status_code == 200
+    assert 'form' not in response.context
+    assert 'form_comment' not in response.context
+
+
+@pytest.mark.django_db
+def test_comment_form_accessible_to_authenticated_user():
     user = User.objects.create_user(
         username='testuser', password='testpassword')
     news = News.objects.create(title='Test News', text='This is a test news')
-    client = Client()
-# Check for anonymous user
-    response = client.get(reverse('news:detail', kwargs={'pk': news.pk}))
-    assert response.status_code == 200
-    assert not response.context.get('form', None)
-
-# Check for authenticated user
+    user = Client()
     user.login(username='testuser', password='testpassword')
     response = user.get(reverse('news:detail', kwargs={'pk': news.pk}))
     assert response.status_code == 200
-    assert response.context.get('form', None) is not None
+    assert 'form' in response.context
