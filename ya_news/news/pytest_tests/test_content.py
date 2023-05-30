@@ -2,12 +2,14 @@ import datetime
 
 import pytest
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.test import Client
 from django.urls import reverse
 
 from news.models import Comment
 from news.models import News
+
+User = get_user_model()
 
 
 @pytest.mark.django_db
@@ -61,8 +63,7 @@ def test_comments_are_sorted_by_created_ascending_on_news_detail_page():
 
 @pytest.mark.django_db
 def test_comment_form_not_accessible_to_anonymous_user():
-    user = User.objects.create_user(username='testuser',
-                                    password='testpassword')
+    User.objects.create_user(username='testuser', password='testpassword')
     news = News.objects.create(title='Test News', text='This is a test news')
     client = Client()
     response = client.get(reverse('news:detail', kwargs={'pk': news.pk}))
@@ -72,8 +73,7 @@ def test_comment_form_not_accessible_to_anonymous_user():
 
 @pytest.mark.django_db
 def test_comment_form_accessible_to_authenticated_user():
-    user = User.objects.create_user(username='testuser',
-                                    password='testpassword')
+    User.objects.create_user(username='testuser', password='testpassword')
     news = News.objects.create(title='Test News', text='This is a test news')
     client = Client()
     client.login(username='testuser', password='testpassword')
