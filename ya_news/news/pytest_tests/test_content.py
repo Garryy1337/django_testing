@@ -62,23 +62,18 @@ def test_comments_are_sorted_by_created_ascending_on_news_detail_page():
 
 
 @pytest.mark.django_db
-def test_comment_form_not_accessible_to_anonymous_user():
-    user = User.objects.create_user(username='testuser',
-                                    password='testpassword')
+def test_comment_form_access():
+    user = User.objects.create_user(
+        username='testuser', password='testpassword')
     news = News.objects.create(title='Test News', text='This is a test news')
     client = Client()
+# Check for anonymous user
     response = client.get(reverse('news:detail', kwargs={'pk': news.pk}))
     assert response.status_code == 200
-    assert 'form' not in response.context
+    assert not response.context.get('form', None)
 
-
-@pytest.mark.django_db
-def test_comment_form_accessible_to_authenticated_user():
-    user = User.objects.create_user(username='testuser',
-                                    password='testpassword')
-    news = News.objects.create(title='Test News', text='This is a test news')
-    client = Client()
-    client.login(username='testuser', password='testpassword')
-    response = client.get(reverse('news:detail', kwargs={'pk': news.pk}))
+# Check for authenticated user
+    user.login(username='testuser', password='testpassword')
+    response = user.get(reverse('news:detail', kwargs={'pk': news.pk}))
     assert response.status_code == 200
-    assert 'form' in response.context
+    assert response.context.get('form', None) is not None
