@@ -2,18 +2,17 @@ import datetime
 
 import pytest
 
-from django.contrib.auth import get_user_model
+from django.contrib.auth.models import User
 from django.test import Client
 from django.urls import reverse
 
 from news.models import Comment
 from news.models import News
 
-User = get_user_model()
-
 
 @pytest.mark.django_db
 def test_home_page_displays_up_to_10_news():
+    # Создаем 11 новостей
     for i in range(11):
         News.objects.create(title=f'Test News {i}',
                             text=f'This is test news {i}')
@@ -43,6 +42,7 @@ def test_news_are_sorted_by_date_descending_on_home_page():
 @pytest.mark.django_db
 def test_comments_are_sorted_by_created_ascending_on_news_detail_page():
     news = News.objects.create(title='Test News', text='This is a test news')
+    # Создаем комментарии с датами в обратном порядке
     comment1 = Comment.objects.create(news=news, text='Comment 1',
                                       created=datetime.datetime(2023, 1, 1, 12,
                                                                 0, 0))
@@ -63,7 +63,8 @@ def test_comments_are_sorted_by_created_ascending_on_news_detail_page():
 
 @pytest.mark.django_db
 def test_comment_form_not_accessible_to_anonymous_user():
-    User.objects.create_user(username='testuser', password='testpassword')
+    user = User.objects.create_user(username='testuser',
+                                    password='testpassword')
     news = News.objects.create(title='Test News', text='This is a test news')
     client = Client()
     response = client.get(reverse('news:detail', kwargs={'pk': news.pk}))
@@ -73,7 +74,8 @@ def test_comment_form_not_accessible_to_anonymous_user():
 
 @pytest.mark.django_db
 def test_comment_form_accessible_to_authenticated_user():
-    User.objects.create_user(username='testuser', password='testpassword')
+    user = User.objects.create_user(username='testuser',
+                                    password='testpassword')
     news = News.objects.create(title='Test News', text='This is a test news')
     client = Client()
     client.login(username='testuser', password='testpassword')
