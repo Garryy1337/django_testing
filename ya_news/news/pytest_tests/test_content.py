@@ -1,130 +1,82 @@
+import datetime
+
 import pytest
 
-from django.contrib.auth import get_user_model
+from django.contrib.auth.models import User
 from django.test import Client
-from django.urls import reverse_lazy
+from django.urls import reverse
 
 from news.models import Comment
 from news.models import News
 
-User = get_user_model()
-
 
 @pytest.mark.django_db
-def test_anonymous_user_can_access_home_page():
+def test_home_page_displays_up_to_10_news():
+    for i in range(11):
+        News.objects.create(title=f'Test News {i}',
+                            text=f'This is test news {i}')
     client = Client()
-    response = client.get(reverse_lazy('news:home'))
+    response = client.get(reverse('news:home'))
     assert response.status_code == 200
+    assert len(response.context['news_feed']) == 10
 
 
 @pytest.mark.django_db
-def test_anonymous_user_can_access_news_detail_page():
+def test_news_are_sorted_by_date_descending_on_home_page():
+    news3 = News.objects.create(title='Test News 3',
+                                text='This is test news 3')
+    news2 = News.objects.create(title='Test News 2',
+                                text='This is test news 2')
+    news1 = News.objects.create(title='Test News 1',
+                                text='This is test news 1')
+    client = Client()
+    response = client.get(reverse('news:home'))
+    assert response.status_code == 200
+    news_feed = response.context['news_feed']
+    assert news_feed[0] == news3
+    assert news_feed[1] == news2
+    assert news_feed[2] == news1
+
+
+@pytest.mark.django_db
+def test_comments_are_sorted_by_created_ascending_on_news_detail_page():
     news = News.objects.create(title='Test News', text='This is a test news')
+    comment1 = Comment.objects.create(news=news, text='Comment 1',
+                                      created=datetime.datetime(2023, 1, 1, 12,
+                                                                0, 0))
+    comment2 = Comment.objects.create(news=news, text='Comment 2',
+                                      created=datetime.datetime(2023, 1, 2, 12,
+                                                                0, 0))
+    comment3 = Comment.objects.create(news=news, text='Comment 3',
+                                      created=datetime.datetime(2023, 1, 3, 12,
+                                                                0, 0))
+
     client = Client()
-    response = client.get(reverse_lazy('news:detail', kwargs={'pk': news.pk}))
+    response = client.get(reverse('news:detail', kwargs={'pk': news.pk}))
     assert response.status_code == 200
+    comments = response.context[
+        'news'].comments.all()
+    assert list(comments) == [comment1, comment2, comment3]
 
 
 @pytest.mark.django_db
-def test_comment_author_can_access_edit_comment_page():
+def test_comment_form_not_accessible_to_anonymous_user():
     user = User.objects.create_user(username='testuser',
                                     password='testpassword')
     news = News.objects.create(title='Test News', text='This is a test news')
-    comment = Comment.objects.create(news=news, author=user,
-                                     text='Test comment')
     client = Client()
-    client.login(username='testuser', password='testpassword')
-    response = client.get(reverse_lazy('news:edit', kwargs={'pk': comment.pk}))
+    response = client.get(reverse('news:detail', kwargs={'pk': news.pk}))
     assert response.status_code == 200
+    assert 'form' not in response.context
 
 
 @pytest.mark.django_db
-def test_comment_author_can_access_delete_comment_page():
+def test_comment_form_accessible_to_authenticated_user():
     user = User.objects.create_user(username='testuser',
                                     password='testpassword')
     news = News.objects.create(title='Test News', text='This is a test news')
-    comment = Comment.objects.create(news=news, author=user,
-                                     text='Test comment')
     client = Client()
     client.login(username='testuser', password='testpassword')
-    response = client.get(
-        reverse_lazy('news:delete', kwargs={'pk': comment.pk}))
+    response = client.get(reverse('news:detail', kwargs={'pk': news.pk}))
     assert response.status_code == 200
-
-
-@pytest.mark.django_db
-def test_anonymous_user_redirected_to_login_page_when_accessing_edit_page():
-    news = News.objects.create(title='Test News', text='This is a test news')
-    comment = Comment.objects.create(news=news, author=None,
-                                     text='Test comment')
-    client = Client()
-    response = client.get(reverse_lazy('news:edit', kwargs={'pk': comment.pk}))
-    assert response.status_code == 302
-    assert response.url == '/auth/login/?next=' + \
-           reverse_lazy('news:edit',
-                        kwargs={
-                            'pk': comment.pk})
-
-
-@pytest.mark.django_db
-def test_anonymous_user_redirected_to_login_page_when_delete_comment_page():
-    news = News.objects.create(title='Test News', text='This is a test news')
-    comment = Comment.objects.create(news=news, author=None,
-                                     text='Test comment')
-    client = Client()
-    response = client.get(
-        reverse_lazy('news:delete', kwargs={'pk': comment.pk}))
-    assert response.status_code == 302
-    assert response.url == '/auth/login/?next=' + \
-           reverse_lazy('news:delete',
-                        kwargs={
-                            'pk': comment.pk})
-
-
-@pytest.mark.django_db
-def test_user_cannot_access_delete_or_edit_comment_page_of_other_users():
-    user1 = User.objects.create_user(username='testuser1',
-                                     password='testpassword')
-    user2 = User.objects.create_user(username='testuser2',
-                                     password='testpassword')
-    news = News.objects.create(title='Test News', text='This is a test news')
-    comment = Comment.objects.create(news=news, author=user1,
-                                     text='Test comment')
-    client = Client()
-    client.force_login(user2)
-    response_edit = client.get(reverse_lazy(
-        'news:edit', kwargs={'pk': comment.pk}))
-    response_delete = client.get(reverse_lazy(
-        'news:delete', kwargs={'pk': comment.pk}))
-    assert response_edit.status_code == 404
-    assert response_delete.status_code == 404
-
-
-@pytest.mark.django_db
-def test_user_cannot_access_delete_comment_page_of_other_users():
-    user1 = User.objects.create_user(username='testuser1',
-                                     password='testpassword')
-    user2 = User.objects.create_user(username='testuser2',
-                                     password='testpassword')
-    news = News.objects.create(title='Test News', text='This is a test news')
-    comment = Comment.objects.create(news=news, author=user1,
-                                     text='Test comment')
-    client = Client()
-    client.force_login(user2)
-    response = client.get(reverse_lazy(
-        'news:delete', kwargs={'pk': comment.pk}))
-    assert response.status_code == 404.
-
-
-@pytest.mark.django_db
-def test_registration_login_logout_pages_accessible_to_anonymous_user():
-    client = Client()
-    response = client.get(reverse_lazy('users:signup'))
-    assert response.status_code == 200
-
-    response = client.get(reverse_lazy('users:login'))
-    assert response.status_code == 200
-
-    response = client.get(reverse_lazy('users:logout'), follow=True)
-    assert response.status_code == 200
-    assert response.redirect_chain == []
+    assert 'form' in response.context
