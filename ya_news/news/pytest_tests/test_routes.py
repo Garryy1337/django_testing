@@ -10,6 +10,10 @@ from news.models import News
 
 @pytest.mark.django_db
 def test_anonymous_user_can_access_home_page():
+    """
+    Проверяем, что анонимный пользователь может получить
+      доступ к главной странице новостей.
+    """
     client = Client()
     response = client.get(reverse_lazy('news:home'))
     assert response.status_code == 200
@@ -17,6 +21,10 @@ def test_anonymous_user_can_access_home_page():
 
 @pytest.mark.django_db
 def test_anonymous_user_can_access_news_detail_page():
+    """
+    Проверяем, что анонимный пользователь может
+      получить доступ к странице детальной информации о новости.
+    """
     news = News.objects.create(title='Test News', text='This is a test news')
     client = Client()
     response = client.get(reverse_lazy('news:detail', kwargs={'pk': news.pk}))
@@ -25,6 +33,10 @@ def test_anonymous_user_can_access_news_detail_page():
 
 @pytest.mark.django_db
 def test_comment_author_can_access_edit_comment_page():
+    """
+    Проверяем, что автор комментария может получить
+      доступ к странице редактирования своего комментария.
+    """
     user = User.objects.create_user(username='testuser',
                                     password='testpassword')
     news = News.objects.create(title='Test News', text='This is a test news')
@@ -38,6 +50,10 @@ def test_comment_author_can_access_edit_comment_page():
 
 @pytest.mark.django_db
 def test_comment_author_can_access_delete_comment_page():
+    """
+    Проверяем, что автор комментария может получить
+      доступ к странице удаления своего комментария.
+    """
     user = User.objects.create_user(username='testuser',
                                     password='testpassword')
     news = News.objects.create(title='Test News', text='This is a test news')
@@ -52,6 +68,11 @@ def test_comment_author_can_access_delete_comment_page():
 
 @pytest.mark.django_db
 def test_anonymous_user_redirected_to_login_page_when_accessing_edit_page():
+    """
+    Проверяем, что анонимный пользователь перенаправляется
+      на страницу аутентификации при попытке получить
+        доступ к странице редактирования комментария.
+    """
     news = News.objects.create(title='Test News', text='This is a test news')
     comment = Comment.objects.create(news=news, author=None,
                                      text='Test comment')
@@ -66,6 +87,11 @@ def test_anonymous_user_redirected_to_login_page_when_accessing_edit_page():
 
 @pytest.mark.django_db
 def test_anonymous_user_redirected_to_login_page_when_delete_comment_page():
+    """
+    Проверяем, что анонимный пользователь перенаправляется
+      на страницу аутентификации при попытке
+        получить доступ к странице удаления комментария.
+    """
     news = News.objects.create(title='Test News', text='This is a test news')
     comment = Comment.objects.create(news=news, author=None,
                                      text='Test comment')
@@ -81,6 +107,11 @@ def test_anonymous_user_redirected_to_login_page_when_delete_comment_page():
 
 @pytest.mark.django_db
 def test_user_cannot_access_edit_or_delete_comment_page_of_other_users():
+    """
+    Проверяем, что пользователь не может получить
+      доступ к страницам редактирования и
+        удаления комментария других пользователей.
+    """
     user1 = User.objects.create_user(username='testuser1',
                                      password='testpassword')
     user2 = User.objects.create_user(username='testuser2',
@@ -100,6 +131,10 @@ def test_user_cannot_access_edit_or_delete_comment_page_of_other_users():
 
 @pytest.mark.django_db
 def test_user_cannot_access_delete_comment_page_of_other_users():
+    """
+   Проверяем, что пользователь не может получить
+     доступ к странице удаления комментария других пользователей.
+    """
     user1 = User.objects.create_user(username='testuser1',
                                      password='testpassword')
     user2 = User.objects.create_user(username='testuser2',
@@ -116,6 +151,10 @@ def test_user_cannot_access_delete_comment_page_of_other_users():
 
 @pytest.mark.django_db
 def test_registration_login_logout_pages_accessible_to_anonymous_user():
+    """
+    Проверяем, что анонимный пользователь может получить
+      доступ к страницам регистрации, аутентификации и выхода из системы.
+    """
     client = Client()
     response = client.get(reverse_lazy('users:signup'))
     assert response.status_code == 200
