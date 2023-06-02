@@ -13,28 +13,44 @@ User = get_user_model()
 
 @pytest.fixture
 def create_news():
+    """
+    Фикстура для создания трех тестовых новостей.
+
+    Возвращает кортеж из трех объектов модели News.
+    """
     news3 = News.objects.create(
-        title='Test News 3', text='This is test news 3')
+        title='Тестовая новость 3', text='Это тестовая новость 3')
     news2 = News.objects.create(
-        title='Test News 2', text='This is test news 2')
+        title='Тестовая новость 2', text='Это тестовая новость 2')
     news1 = News.objects.create(
-        title='Test News 1', text='This is test news 1')
+        title='Тестовая новость 1', text='Это тестовая новость 1')
     return news1, news2, news3
 
 
+@pytest.fixture
+def create_news_db():
+    """
+    Фикстура для создания новости в базе данных.
+
+    Возвращает функцию, которая принимает два аргумента: title и text,
+    и создает новую запись в базе данных модели News с указанными значениями.
+    """
+    def _create_news(title, text):
+        return News.objects.create(title=title, text=text)
+
+    return _create_news
+
+
 @pytest.mark.django_db
-def test_home_page_displays_up_to_10_news():
-    """
-    Тест проверяет, что на главной странице отображается не более 10 новостей.
-    """
+def test_home_page_displays_up_to_10_news(create_news_db):
+    """Проверка, что домашняя страница отображает до 10 новостей."""
     # Создаем 11 новостей
     for i in range(11):
-        News.objects.create(title=f'Test News {i}',
-                            text=f'This is test news {i}')
+        create_news_db(f'Test News {i}', f'This is test news {i}')
     client = Client()
     response = client.get(reverse('news:home'))
     assert response.status_code == HTTPStatus.OK
-    assert News.objects.count() == 11
+    assert len(response.context['news_feed']) == 10
 
 
 @pytest.mark.django_db
